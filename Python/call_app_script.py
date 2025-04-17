@@ -5,40 +5,42 @@
 # connecting a google form's responses to a google sheet
 # 
 
-import requests
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-from authentication import authenticate_google_account
+#import requests
+#from google_auth_oauthlib.flow import InstalledAppFlow
+#from google.auth.transport.requests import Request
+from service_authentication import authenticate_service_account
 
-WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzu6eLbKVl-fEMbXb4Tn-gZG3Xjseg8BpuHi8gFtIOzhh6YNPYQBbVyM6sCZUSgfPfwyQ/exec" 
+#WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzu6eLbKVl-fEMbXb4Tn-gZG3Xjseg8BpuHi8gFtIOzhh6YNPYQBbVyM6sCZUSgfPfwyQ/exec" 
 #Comes from the deploy section in the google app script we run
+
+SCRIPT_ID = "1Eg52dawiUREWuE2Q6M7XcV3NEjZuX0JTir1DrWDA8AFChFt2CE3C-nZD"
+#Comes from the url of the app script editor
 
 SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/script.external_request', 'https://www.googleapis.com/auth/script.scriptapp', 'https://www.googleapis.com/auth/forms', 'https://www.googleapis.com/auth/spreadsheets']  
 #Spreadsheets and forms scopes are required by the app script. Drive scope seemed to fix an authentication 401 error. The other two may or may not be necessary for calling app scripts, I'm not sure.
 
 
-def call_google_apps_script(params):
+def call_google_apps_script(function, parameters):
     '''
     Attempts calling the google apps script file from WEB_APP_URL with the inputted parameters
     '''
-    creds = authenticate_google_account(SCOPES)
+    service = authenticate_service_account('script','v1', SCOPES)
 
-    headers = {
-        'Authorization': f'Bearer {creds.token}'
+    request = {
+        "function": function,  
+        "parameters": parameters,
+        "devMode": True
     }
 
-    #The API request is made here, using the web app url (determining which script to run), 
-    #the parameters (determining which function to run), and token (inside of headers)
-    response = requests.get(url=WEB_APP_URL,params=params, headers=headers)
+    # Make the API call
+    response = service.scripts().run(body=request, scriptId=SCRIPT_ID).execute()
 
-    if response.status_code == 200:
-        print("Google Apps Script executed successfully!")
-        print(response.text)
-        return response.text
+    # Handle the response
+    if 'error' in response:
+        print("Script error:", response['error']['details'][0]['errorMessage'])
     else:
-        print(f"Failed to execute script. Status code: {response.status_code}")
-        print(response.text)
-        return None
+        print("Script result:", response)
+        return response['response'].get('result')
 
 if __name__ == '__main__':
     #My test call that successfully linked a form to a specific google sheet
@@ -48,4 +50,6 @@ if __name__ == '__main__':
     #My test call that succesfully duplicated an old form to a new one (with theme, questions, description, everything)
     #params = {'function':'duplicateForm', 'f_id':'19DiZMuiejDLgYUKLmP5sGO66BR7rhoiZrQ-_KjKLISI', 'title':'api_duplicated2'}
     #call_google_apps_script(params)
-    pass
+
+    op = call_google_apps_script("outputter", ["testing"])
+    print(op)

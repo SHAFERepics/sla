@@ -13,7 +13,7 @@ import numpy as np
 import google.auth
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from authentication import authenticate_google_account
+from service_authentication import authenticate_service_account
 from call_app_script import call_google_apps_script
 
 CREATION_FORM_ID = "1GCE8SIKYwvZ8YNni_V0cHsCPmJD9pfps2NY1AjdBOJg"
@@ -35,11 +35,9 @@ def get_sheet_range(spreadsheet_id, range_name):
     Retrieves a range from any spreadsheet
     Returns a result which you can access values from with .get("values", [])
     '''
-    creds = authenticate_google_account(SCOPES)
-    # pylint: disable=maybe-no-member
 
     try:
-        service = build("sheets", "v4", credentials=creds)
+        service = authenticate_service_account("sheets", "v4", SCOPES)
 
         result = (
             service.spreadsheets()
