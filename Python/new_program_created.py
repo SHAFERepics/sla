@@ -1,5 +1,6 @@
 #=========================================================------
 #***PURPOSE***
+# TODO fix the bugs :(
 #-------------
 # Update "program_data.json" to include new program details when
 # an SLA employee enters information into the program creation form
@@ -19,7 +20,7 @@ from call_app_script import call_google_apps_script
 CREATION_FORM_ID = "1GCE8SIKYwvZ8YNni_V0cHsCPmJD9pfps2NY1AjdBOJg"
 #Id to the sheet that receives responses from the SLA Program Creation form
 
-BASE_FEEDBACK_FORM_ID = "19DiZMuiejDLgYUKLmP5sGO66BR7rhoiZrQ-_KjKLISI"
+PROTOTYPE_FEEDBACK_FORM_ID = "1I0GLz04EVFY390jGGZmPe_K9lA9frTA3EGPJuAssFIw"
 #Id to the sheet that is duplicated for any newly created feedback form
 
 SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/forms', 'https://www.googleapis.com/auth/spreadsheets']  
@@ -27,7 +28,12 @@ SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/a
 
 
 def perform_trigger():
-    values, indices = read_new_rows(CREATION_FORM_ID)
+    result = read_new_rows(CREATION_FORM_ID)
+    if not isinstance(result, tuple) or not len(result) == 2:
+        print("Uncompleted trigger")
+        return
+    
+    values, indices = result
     peform_actions(values, indices)
 
 def get_sheet_range(spreadsheet_id, range_name):
@@ -39,12 +45,17 @@ def get_sheet_range(spreadsheet_id, range_name):
     try:
         service = authenticate_service_account("sheets", "v4", SCOPES)
 
-        result = (
-            service.spreadsheets()
-            .values()
-            .get(spreadsheetId=spreadsheet_id, range=range_name)
-            .execute()
-        )
+        try:
+            result = (
+                service.spreadsheets()
+                .values()
+                .get(spreadsheetId=spreadsheet_id, range=range_name)
+                .execute()
+            )
+        except HttpError as error:
+            print("Error with result: ", error)
+            return error
+        
         rows = result.get("values", [])
         print(f"{len(rows)} rows retrieved")
         return result
@@ -60,6 +71,9 @@ def read_new_rows(spreadsheet_id):
     # Set the range to all rows and get the values from this range
     range_string = "A2:E"
     result = get_sheet_range(spreadsheet_id, range_string)
+    if not isinstance(result, dict):
+        print("Read new rows action uncompleted")
+        return
     all_values = np.array(result.get("values", []))
 
     # Filter out to new rows
@@ -92,12 +106,11 @@ def new_row_action(row_values, row_index):
     '''TODO write code here that checks if title is already in the list of active programs, then increment it with a while loop until its unique'''
     
     d_params = {
-        'function':'duplicateForm',
-        'f_id':BASE_FEEDBACK_FORM_ID,
+        'f_id':PROTOTYPE_FEEDBACK_FORM_ID,
         'title':f_title
     }
 
-    d_response = call_google_apps_script(d_params)
+    d_response = call_google_apps_script('duplicateForm', d_params)
 
     d_data = app_script_response_error_check(d_response)
     
@@ -106,12 +119,11 @@ def new_row_action(row_values, row_index):
 
         s_title = "responses_"+f_title
         c_params = {
-            'function':'linkFormToNewSheet',
             'f_id':new_form_id,
             'title':s_title
         }
 
-        c_response = call_google_apps_script(c_params)
+        c_response = call_google_apps_script('linkFormToNewSheet', c_params)
         c_data = app_script_response_error_check(c_response)
 
         if c_data and c_data.get("sheetId"):

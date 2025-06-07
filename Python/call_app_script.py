@@ -16,7 +16,7 @@ from service_authentication import authenticate_service_account
 SCRIPT_ID = "1Eg52dawiUREWuE2Q6M7XcV3NEjZuX0JTir1DrWDA8AFChFt2CE3C-nZD"
 #Comes from the url of the app script editor
 
-SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/script.external_request', 'https://www.googleapis.com/auth/script.scriptapp', 'https://www.googleapis.com/auth/forms', 'https://www.googleapis.com/auth/spreadsheets']  
+SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/script.external_request', 'https://www.googleapis.com/auth/script.scriptapp', 'https://www.googleapis.com/auth/forms', 'https://www.googleapis.com/auth/spreadsheets', "https://www.googleapis.com/auth/script.projects"]  
 #Spreadsheets and forms scopes are required by the app script. Drive scope seemed to fix an authentication 401 error. The other two may or may not be necessary for calling app scripts, I'm not sure.
 
 
@@ -29,7 +29,8 @@ def call_google_apps_script(function, parameters):
     request = {
         "function": function,  
         "parameters": parameters,
-        "devMode": True
+        "devMode": True,
+        
     }
 
     # Make the API call

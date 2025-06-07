@@ -6,7 +6,8 @@ from googleapiclient.discovery import build
 def authenticate_service_account(service, version, scopes):
     creds = service_account.Credentials.from_service_account_file(
         'service_credentials.json',
-        scopes=scopes
+        scopes=scopes,
+        subject="slaadmin@shaferepicspurdue.com"
     )
 
     service = build(service, version, credentials=creds)
